@@ -6,6 +6,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import java.util.*;
 
 import java.io.IOException;
 
@@ -26,7 +27,7 @@ public class CS499MapReduce {
 
 
 
-public class movieReducer extends Reducer<Text, Text, Text, Text> {
+public class combiner extends Reducer<Text, Text, Text, Text> {
   @Override
   protected void reduce(final Text key, final Iterable<Text> values,
     final Context context) throws IOException, InterruptedException {
@@ -35,7 +36,7 @@ public class movieReducer extends Reducer<Text, Text, Text, Text> {
    final Iterator<Text> itr = values.iterator();
    while (itr.hasNext()) {
     final String text = itr.next().toString();
-    String[] line_values = line.split("\t");
+    String[] line_values = text.split("\t");
     final Double value = Double.parseDouble(line_values[2]);
     count++;
     sum += value;
@@ -43,11 +44,47 @@ public class movieReducer extends Reducer<Text, Text, Text, Text> {
 
    final Double average = sum / count;
 
-   context.write(key, new Text(average + "_" + count));
-  };
+   context.write(key, new Text(average + "_" + count + "_" + key));
+  }
  }
 
+ public class movieReducer extends Reducer<Text, Text, Text, Text> {
+  @Override
+  protected void reduce(final Text key, final Iterable<Text> values,
+    final Context context) throws IOException, InterruptedException {
+		final Iterator<Text> itr = values.iterator();
 
+		PriorityQueue<String> heap = new PriorityQueue<String>(10, new Comparator(){
+			public int compare(String x, String y){
+				String[] x_values = x.split("_");
+				String[] y_values = y.split("_");
+				final Double xNum = Double.parseDouble(x_values[0]);
+				final Double yNum = Double.parseDouble(y_values[0]);
+
+				return xNum - yNum;
+			}
+		});
+
+	   while (itr.hasNext()) {
+	    final String text = itr.next().toString();
+	    heap.add(text);
+	   }
+
+	   while(heap.size() > 10){
+	   		heap.poll();
+	   }
+
+	      while(!heap.isEmpty()){
+	   		final String line = heap.poll();
+	   		String[] line_values = text.split("_");
+	   		context.write(new Text(line_values[2]), new Text (line_values[2] + "_" + line_values[0]);
+	   }
+
+
+
+   
+   }
+}
 
     // Main method
     public static void main(String[] args) throws Exception {
@@ -68,6 +105,7 @@ public class movieReducer extends Reducer<Text, Text, Text, Text> {
         // set the mapper and reducer class
         job.setMapperClass(movieMapper.class);
         job.setReducerClass(movieReducer.class);
+        job.setCombinerClass(combiner.class)
 
         // Set the key and value class
         job.setOutputKeyClass(Text.class);
