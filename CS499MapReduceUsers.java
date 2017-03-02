@@ -10,7 +10,7 @@ import java.util.*;
 
 import java.io.IOException;
 
-public class CS499MapReduce {
+public class CS499MapReduceUsers {
     // Class to implement the mapper interface
     static class userMapper extends Mapper<LongWritable, Text, Text, Text> {
         // Map interface of the MapReduce job
